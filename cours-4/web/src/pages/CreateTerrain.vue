@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui';
 import { backend } from '@/utils/backend';
@@ -23,9 +23,18 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>
 
 const form = reactive<Partial<FormSchema>>({})
+const photo = ref<File | null>(null)
+
+const onPhotoChange = (event: Event) => {
+  const input = event.target as HTMLInputElement | null
+  photo.value = input?.files?.[0] ?? null
+}
 
 const onSubmit = async (event: FormSubmitEvent<FormSchema>) => {
   const response = await backend.terrains.create(event.data);
+  if (photo.value) {
+    await backend.terrains.addPhoto(response.id, photo.value)
+  }
   toast.add({
     title: 'Terrain créé',
     description: `Le terrain "${response.nom}" a été créé avec succès.`,
@@ -82,6 +91,10 @@ const onSubmit = async (event: FormSubmitEvent<FormSchema>) => {
             <USelect v-model="form.orientationFacade" class="w-full" :items="['NORD', 'SUD', 'EST', 'OUEST']" />
           </UFormField>
         </div>
+
+        <UFormField name="photo" label="Photo">
+          <UInput type="file" accept="image/*" class="w-full" @change="onPhotoChange" />
+        </UFormField>
 
         <div>
           <UButton type="submit" color="primary" label="Créer le terrain" />
